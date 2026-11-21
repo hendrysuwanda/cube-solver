@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cube Solver — Prototipe</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --text:#eef1f6; --mute:#8b93a3; --acc:#4f8cff; --ok:#3ccf7d; --err:#ff6b6b; --warn:#ffb547; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  body { display:flex; flex-direction:column; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px 4px; }
+  h1 { font-size:18px; margin:0; letter-spacing:.2px; }
+  h1 small { color:var(--mute); font-weight:500; font-size:12px; margin-left:6px; }
+  .sizes { display:flex; gap:4px; margin:6px 16px 0; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px; }
+  .size { flex:1; height:34px; border:0; border-radius:9px; background:none; color:var(--mute); font-weight:700; font-size:14px; }
+  .size.on { background:var(--acc); color:#fff; }
+  .lsize { flex:1; height:34px; border:0; border-radius:9px; background:none; color:var(--mute); font-weight:700; font-size:14px; }
+  .lsize.on { background:var(--acc); color:#fff; }
+  .size:disabled { opacity:.5; }
+  .modes { display:flex; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:3px; }
+  .mode { border:0; background:none; color:var(--mute); font-weight:700; font-size:13px; padding:6px 14px; border-radius:999px; }
+  .mode.on { background:#fff; color:#111; }
+  .learn { display:none; margin:6px 16px 0; }
+  body.learning .learn { display:block; }
+  body.learning .solve-only { display:none !important; }
+  .lsizes { margin:0 0 8px; }
+  #lessons { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  #lessons::-webkit-scrollbar { display:none; }
+  .lesson { flex:0 0 auto; min-width:40px; height:32px; padding:0 10px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--mute); font-weight:700; }
+  .lesson.on { background:var(--acc); border-color:var(--acc); color:#fff; }
+  .lcard { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-top:8px; }
+  .lhead { display:flex; align-items:center; gap:8px; }
+  #lessonTitle { flex:1; font-size:16px; margin:0; }
+  .nav { width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:none; color:var(--text); }
+  .nav:disabled { opacity:.3; }
+  #lessonText { font-size:13px; color:#c9cfdb; margin:6px 0 8px; max-height:5.6em; overflow-y:auto; }
+  #cases { display:flex; gap:6px; flex-wrap:wrap; }
+  .case { height:30px; padding:0 10px; border-radius:8px; border:1px solid var(--line); background:#11141a; color:var(--text); font-size:13px; }
+  .case.on { border-color:var(--acc); color:#fff; background:#1d2c4d; }
+  #caseHint { font-size:12px; color:var(--warn); margin-top:6px; min-height:1em; }
+  #alg { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--mute); margin-top:6px; display:none; }
+  body.learning #alg { display:block; }
+  body.learning .status:empty { display:none; }
+  #scan { position:fixed; inset:0; z-index:10; background:var(--bg); display:flex; flex-direction:column; padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  #scan[hidden] { display:none; }
+  .shead { display:flex; align-items:center; gap:10px; padding:12px 16px 4px; }
+  #scanTitle { flex:1; margin:0; font-size:17px; }
+  #scanDot { width:18px; height:18px; border-radius:5px; outline:1px solid #0008; }
+  .ssizes { display:flex; gap:4px; margin:4px 16px 8px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px; }
+  .ssize { flex:1; height:32px; border:0; border-radius:9px; background:none; color:var(--mute); font-weight:700; }
+  .ssize.on { background:var(--acc); color:#fff; }
+  #scanText { padding:0 16px; font-size:14px; color:#c9cfdb; min-height:3em; }
+  .sview { position:relative; flex:1 1 auto; min-height:200px; margin:6px 16px; border-radius:14px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+  #scanCanvas, #scanVideo { max-width:100%; max-height:100%; touch-action:none; display:block; }
+  #scanCanvas[hidden], #scanVideo[hidden] { display:none; }
+  #scanEmpty { color:var(--mute); text-align:center; padding:20px; font-size:14px; }
+  #scanGuide { position:absolute; aspect-ratio:1; pointer-events:none;
+    background-image: linear-gradient(#fff 2px, transparent 2px), linear-gradient(90deg, #fff 2px, transparent 2px);
+    background-size: calc(100% / var(--n)) calc(100% / var(--n)); border-right:2px solid #fff; border-bottom:2px solid #fff; opacity:.9; }
+  #scanGuide[hidden] { display:none; }
+  #scanAdjust { display:flex; align-items:center; gap:8px; padding:4px 16px; color:var(--mute); font-size:12px; }
+  #scanAdjust[hidden] { display:none; }
+  #scanAdjust input { flex:1; accent-color:var(--acc); }
+  #scanThumbs { display:flex; gap:6px; padding:6px 16px; }
+  .thumb { flex:1; aspect-ratio:1; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--mute); font-size:9px; padding:3px; display:grid; grid-template-columns:repeat(var(--n),1fr); gap:1px; align-items:center; justify-items:center; }
+  .thumb i { width:100%; height:100%; border-radius:2px; }
+  .thumb:not(:has(i)) { display:flex; justify-content:center; }
+  .thumb.on { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc); }
+  #scanReview { display:flex; align-items:center; justify-content:center; gap:10px; padding:10px; width:100%; }
+  #scanReview[hidden] { display:none; }
+  .rv-photo, .rv-grid { flex:1; max-width:46%; aspect-ratio:1; }
+  .rv-photo canvas { width:100%; height:100%; border-radius:8px; display:block; }
+  .rv-arrow { color:var(--mute); font-size:18px; }
+  .rv-grid { display:grid; grid-template-columns:repeat(var(--n),1fr); gap:4px; background:#000; padding:4px; border-radius:8px; }
+  .rv-cell { border:0; border-radius:5px; outline:none; }
+  .rv-cell.doubt { outline:3px dashed #fff; outline-offset:-5px; animation:blink 1.2s infinite; }
+  .rv-cell.fixed { opacity:1; }
+  @keyframes blink { 50% { outline-color:#ff6b6b; } }
+  #scanDetect { display:flex; align-items:center; gap:12px; padding:2px 16px 4px; }
+  #scanDetect[hidden] { display:none; }
+  #scanDetect .rv-grid { width:84px; flex:0 0 84px; aspect-ratio:1; max-width:none; }
+  #scanDetect .rv-cell { border-radius:3px; }
+  .dtext { font-size:12px; color:var(--mute); line-height:1.35; }
+  .dtext b { color:var(--text); }
+  #scanGuide { display:grid; grid-template-columns:repeat(var(--n),1fr); }
+  #scanGuide i { width:30%; aspect-ratio:1; border-radius:50%; place-self:center; border:2px solid #000; }
+  #scanPalette { display:flex; gap:10px; justify-content:center; padding:4px 16px; }
+  #scanPalette[hidden] { display:none; }
+  #scanPalette .swatch { width:38px; height:38px; }
+  #scanMini { position:absolute; z-index:3; right:8px; top:8px; width:118px; height:138px; background:rgba(15,17,21,.82); border:1px solid var(--line); border-radius:12px; display:flex; flex-direction:column; transition:all .35s ease; overflow:hidden; cursor:pointer; }
+  #scanMini.big { right:0; top:0; width:100%; height:100%; border-radius:14px; background:rgba(15,17,21,.94); }
+  #scanMini[hidden] { display:none; }
+  #scanMiniGl { flex:1; min-height:0; }
+  #scanMiniGl canvas { width:100%; height:100%; display:block; }
+  #scanMiniCap { font-size:10px; color:#dfe4ee; text-align:center; padding:2px 6px 6px; line-height:1.25; }
+  #scanMini.big #scanMiniCap { font-size:15px; font-weight:600; padding:4px 16px 8px; }
+  #scanMiniHint { display:none; font-size:12px; color:var(--mute); text-align:center; padding-bottom:12px; }
+  #scanMini.big #scanMiniHint { display:block; }
+  #scanFlash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:4; }
+  #scanFlash.go { animation:flash .45s ease-out; }
+  @keyframes flash { 0% { opacity:.9; } 100% { opacity:0; } }
+  .icon { background:none; border:1px solid var(--line); color:var(--text); width:32px; height:32px; border-radius:50%; font-size:15px; }
+  #helpBox { margin:6px 16px 0; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13px; color:#c9cfdb; }
+  #helpBox ol { margin:4px 0; padding-left:18px; }
+  #stage { flex:1 1 auto; min-height:260px; position:relative; touch-action:none; }
+  #stage canvas { width:100%; height:100%; display:block; }
+  .status { margin:0 16px; min-height:38px; font-size:13px; color:var(--mute); }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); } .status.warn { color:var(--warn); }
+  #palette { display:flex; gap:10px; justify-content:center; padding:8px 16px; }
+  .swatch { position:relative; width:42px; height:42px; border-radius:10px; border:2px solid transparent; outline:1px solid #0006; }
+  .swatch.on { border-color:#fff; box-shadow:0 0 0 3px var(--acc); }
+  .cnt { position:absolute; right:-6px; top:-6px; background:#222833; color:var(--mute); font-size:10px; border-radius:8px; padding:1px 5px; border:1px solid var(--line); }
+  .cnt.bad { color:#fff; background:var(--err); border-color:var(--err); }
+  .row { display:flex; gap:8px; padding:6px 16px; }
+  .btn { flex:1; height:44px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--text); font-size:15px; font-weight:600; }
+  .btn.primary { background:var(--acc); border-color:var(--acc); }
+  .btn:disabled { opacity:.4; }
+  #panel { margin:6px 16px 10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  .nowrow { display:flex; align-items:center; gap:12px; }
+  #now { font-size:30px; font-weight:800; min-width:56px; text-align:center; font-family:ui-monospace,Menlo,monospace; }
+  #nowText { flex:1; font-size:14px; color:#c9cfdb; }
+  #progress { color:var(--mute); font-size:12px; }
+  #moves { display:flex; gap:6px; overflow-x:auto; padding:10px 0 4px; scrollbar-width:none; }
+  #moves::-webkit-scrollbar { display:none; }
+  .mv { flex:0 0 auto; min-width:40px; height:32px; border-radius:8px; border:1px solid var(--line); background:#11141a; color:var(--mute); font-family:ui-monospace,Menlo,monospace; font-size:14px; }
+  #phase { font-size:12px; color:var(--acc); margin-top:6px; font-weight:600; }
+  #phase[hidden] { display:none; }
+  .mv.phase-start { margin-left:10px; box-shadow:-6px 0 0 -4px var(--acc); }
+  .mv.done { color:#5d6576; text-decoration:line-through; }
+  .mv.cur { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .ctrl { display:flex; gap:8px; margin-top:6px; }
+  .ctrl .btn { height:40px; }
+  .speed { display:flex; align-items:center; gap:8px; color:var(--mute); font-size:12px; margin-top:8px; }
+  .speed input { flex:1; accent-color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cube Solver</h1>
+  <div class="modes">
+    <button class="mode on" data-mode="solve">Solver</button>
+    <button class="mode" data-mode="learn">Belajar</button>
+  </div>
+  <button class="icon solve-only" id="help" aria-label="Bantuan">?</button>
+</header>
+<div class="learn">
+  <div class="sizes lsizes">
+    <button class="lsize" data-n="2">2×2</button>
+    <button class="lsize on" data-n="3">3×3</button>
+    <button class="lsize" data-n="4">4×4</button>
+  </div>
+  <div id="lessons"></div>
+  <div class="lcard">
+    <div class="lhead">
+      <button class="nav" id="lessonPrev" aria-label="Langkah sebelumnya">‹</button>
+      <h2 id="lessonTitle"></h2>
+      <button class="nav" id="lessonNext" aria-label="Langkah berikutnya">›</button>
+    </div>
+    <div id="lessonText"></div>
+    <div id="cases"></div>
+    <div id="caseHint"></div>
+  </div>
+</div>
+<div class="sizes solve-only" role="tablist">
+  <button class="size" data-n="2">2×2</button>
+  <button class="size on" data-n="3">3×3</button>
+  <button class="size" data-n="4">4×4</button>
+</div>
+<div id="helpBox" class="solve-only" hidden>
+  <ol>
+    <li>Pegang kubus: <b>putih di atas</b>, <b>hijau menghadap Anda</b>.</li>
+    <li>Pilih warna di palet, lalu ketuk stiker di kubus 3D. Geser untuk memutar tampilan.</li>
+    <li>Angka di palet harus sama untuk semua warna (2×2: 4, 3×3: 9, 4×4: 16), lalu tekan <b>Selesaikan</b>.</li>
+    <li>Ikuti langkahnya dengan ▶ atau ◀ / ▶▶. Notasi: R = kanan, L = kiri, U = atas, D = bawah, F = depan, B = belakang; ' = berlawanan jarum jam; 2 = 180°.<span id="notation4" hidden> Di 4×4, <b>2R</b> = lapisan kedua dari kanan (bagian dalam), dst.</span></li>
+  </ol>
+</div>
+<div id="stage"></div>
+<div class="status" id="status">Menyiapkan solver…</div>
+<div id="palette" class="solve-only"></div>
+<div class="row solve-only">
+  <button class="btn" id="scanOpen">📷 Scan</button>
+  <button class="btn" id="scramble">Acak</button>
+  <button class="btn" id="reset">Reset</button>
+  <button class="btn primary" id="solve" disabled>Memuat…</button>
+</div>
+<div id="panel" hidden>
+  <div class="nowrow">
+    <div id="now">–</div>
+    <div id="nowText"></div>
+    <div id="progress"></div>
+  </div>
+  <div id="phase" hidden></div>
+  <div id="alg"></div>
+  <div id="moves"></div>
+  <div class="ctrl">
+    <button class="btn" id="first" aria-label="Ke awal">⏮</button>
+    <button class="btn" id="prev" aria-label="Mundur">◀</button>
+    <button class="btn primary" id="play" aria-label="Putar">▶</button>
+    <button class="btn" id="next" aria-label="Maju">▶▶</button>
+  </div>
+  <div class="speed">Cepat <input type="range" id="speed" min="120" max="900" value="420"> Lambat</div>
+</div>
+<div id="scan" hidden>
+  <div class="shead">
+    <div id="scanDot"></div>
+    <h2 id="scanTitle"></h2>
+    <button class="icon" id="scanCancel" aria-label="Tutup">✕</button>
+  </div>
+  <div class="ssizes">
+    <button class="ssize" data-n="2">2×2</button>
+    <button class="ssize" data-n="3">3×3</button>
+    <button class="ssize" data-n="4">4×4</button>
+  </div>
+  <div id="scanText"></div>
+  <div class="sview">
+    <div id="scanEmpty">Tekan <b>Ambil foto</b>. Pastikan ukuran kubus di atas sudah benar. Foto sisi kubus dari depan, cukup dekat, dengan cahaya merata (hindari pantulan lampu).</div>
+    <video id="scanVideo" playsinline muted hidden></video>
+    <div id="scanGuide" hidden></div>
+    <canvas id="scanCanvas" hidden></canvas>
+    <div id="scanReview" hidden></div>
+    <div id="scanMini" class="big">
+      <div id="scanMiniGl"></div>
+      <div id="scanMiniCap"></div>
+      <div id="scanMiniHint">Ketuk untuk memperkecil · lalu Ambil foto / Jepret</div>
+    </div>
+    <div id="scanFlash"></div>
+  </div>
+  <div id="scanDetect" hidden>
+    <div id="scanDetectGrid" class="rv-grid"></div>
+    <div class="dtext"><b>Warna terdeteksi</b><br>Otomatis ikut berubah saat kotak digeser. Salah? Pilih warna di bawah lalu ketuk kotaknya.</div>
+  </div>
+  <div id="scanPalette" hidden></div>
+  <div id="scanAdjust" hidden>Geser kotak agar pas dengan kubus · Ukuran <input type="range" id="scanSize" min="20" max="100" value="62"></div>
+  <div id="scanThumbs"></div>
+  <div class="row">
+    <button class="btn" id="scanPhoto">Ambil foto</button>
+    <button class="btn" id="scanShoot" hidden>Jepret</button>
+    <button class="btn" id="scanRetake" hidden>‹ Foto ulang</button>
+    <button class="btn primary" id="scanOk" disabled>Benar, lanjut ›</button>
+  </div>
+  <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+</div>
+<script type="text/plain" id="worker-src">/*WORKER*/</script>
+<script>/*MAIN*/</script>
+</body>
+</html>
